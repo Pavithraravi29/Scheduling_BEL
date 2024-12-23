@@ -12,16 +12,18 @@ def adjust_to_shift_hours(time: datetime) -> datetime:
         return (time + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
     return time
 
+
 @db_session
-def schedule_operations(df: pd.DataFrame, component_quantities: Dict[str, int], lead_times: Dict[str, datetime] = None) -> \
+def schedule_operations(df: pd.DataFrame, component_quantities: Dict[str, int],
+                        lead_times: Dict[str, datetime] = None) -> \
         Tuple[pd.DataFrame, datetime, float, Dict, Dict, List[str]]:
     if df.empty:
         return pd.DataFrame(), datetime.now(), 0.0, {}, {}, []
 
     # Fetch raw materials and machine statuses from database
-    raw_materials = {rm.child_part_no: (rm.is_available, rm.total_qty, rm.uom) for rm in RawMaterial.select()}
+    raw_materials = {rm.order.part_number: (rm.is_available, rm.total_qty, rm.uom) for rm in RawMaterial.select()}
     machine_statuses = {wm.machine_name: (wm.status, wm.available_from) for wm in WorkCenterMachine.select()}
-    
+
     print("Raw Materials:", raw_materials)
     print("Machine Statuses:", machine_statuses)
 
@@ -32,7 +34,7 @@ def schedule_operations(df: pd.DataFrame, component_quantities: Dict[str, int], 
         for partno, group in df_sorted.groupby('partno')
     }
 
-    start_date = datetime.now()
+    start_date = datetime(2024, 12, 20, 9, 0)  # January 1st, 2024, 9:00 AM
     start_date = adjust_to_shift_hours(start_date)
 
     schedule = []
@@ -75,8 +77,10 @@ def schedule_operations(df: pd.DataFrame, component_quantities: Dict[str, int], 
         operation_time = start_time
         unit_completion_times = {}
 
-        # Check raw material availability
-        raw_available, raw_qty, uom = raw_materials.get(partno, (True, quantity, 'PCS'))
+        # Check raw material availability for the order
+        order = MasterOrder.select(lambda o: o.part_number == partno).first()
+        raw_available = all(rm.is_available for rm in order.raw_materials)
+
         if not raw_available:
             return [], 0, {}
 
@@ -89,14 +93,14 @@ def schedule_operations(df: pd.DataFrame, component_quantities: Dict[str, int], 
         # Get the subset of operations that can be performed
         available_operations = operations[:last_available_idx + 1]
 
-        # Process each unit through available operations
-        for batch_num in range(quantity):
-            current_time = operation_time
-            unit_number = batch_num + 1
+        # Process each operation for all units
+        for op_idx, op in enumerate(available_operations):
+            machine = op['machine']
+            time_required = op['time'] * 60  # multiply by 60 to convert hours to minutes
 
-            for op_idx, op in enumerate(available_operations):
-                machine = op['machine']
-                time_required = op['time']
+            for batch_num in range(quantity):
+                current_time = operation_time
+                unit_number = batch_num + 1
 
                 _, available_time = check_machine_status(machine, current_time)
                 if available_time:
@@ -125,9 +129,6 @@ def schedule_operations(df: pd.DataFrame, component_quantities: Dict[str, int], 
                     ])
                     current_time = next_day_end
                     machine_end_times[machine] = next_day_end
-
-                    if op_idx == len(available_operations) - 1:
-                        unit_completion_times[unit_number] = next_day_end
                 else:
                     batch_schedule.append([
                         partno, op['operation'], machine,
@@ -136,8 +137,12 @@ def schedule_operations(df: pd.DataFrame, component_quantities: Dict[str, int], 
                     current_time = operation_end
                     machine_end_times[machine] = operation_end
 
-                    if op_idx == len(available_operations) - 1:
-                        unit_completion_times[unit_number] = operation_end
+                # Record the completion time for the last unit in this operation
+                if batch_num == quantity - 1:
+                    operation_time = current_time
+
+                if op_idx == len(available_operations) - 1:
+                    unit_completion_times[unit_number] = current_time
 
         return batch_schedule, len(available_operations), unit_completion_times
 

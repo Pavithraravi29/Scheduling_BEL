@@ -6,8 +6,8 @@ def configure_database():
         provider='postgres',
         user='postgres',
         password='password',
-        host='172.18.7.85',
-        database='BEL_DB'
+        host='172.18.7.88',
+        database='scheduling_bel'
     )
     db.generate_mapping(create_tables=True)
 
