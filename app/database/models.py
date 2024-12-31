@@ -69,9 +69,10 @@ class Operation(db.Entity):
 class WorkCenterMachine(db.Entity):
     machine_id = PrimaryKey(int, auto=True)
     machine_name = Required(str)
-    work_center = Required(WorkCenter)
+
     status = Required(str)  # 'OK', 'WARNING', 'CRITICAL', or 'OFF'
     available_from = Optional(datetime)
+    work_center = Required(WorkCenter)
     # Reverse relationship
     operations = Set(Operation)
 

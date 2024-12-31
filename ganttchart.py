@@ -9,7 +9,7 @@ st.title("Production Schedule")
 
 # Make a request to the scheduling endpoint
 try:
-    response = requests.get("http://172.18.7.88:2727/schedule/")
+    response = requests.get("http://172.18.7.88:1267/schedule/")
     response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
     data = response.json()
 except requests.exceptions.RequestException as e:
@@ -26,7 +26,7 @@ else:
     df = pd.DataFrame(operations_data)
     df["start_time"] = pd.to_datetime(df["start_time"], format="mixed")
     df["end_time"] = pd.to_datetime(df["end_time"], format="mixed")
-    
+
     # Display overall production metrics
     st.header("Overall Production Metrics")
     col1, col2 = st.columns(2)
@@ -34,7 +34,7 @@ else:
         st.metric("Overall End Time", data["overall_end_time"])
     with col2:
         st.metric("Overall Time (minutes)", data["overall_time"])
-    
+
     # Display the operations schedule as a Gantt chart
     st.header("Operations Schedule")
     chart = alt.Chart(df).mark_bar().encode(
@@ -45,7 +45,7 @@ else:
         tooltip=['component', 'description', 'quantity', 'start_time', 'end_time']
     ).interactive()
     st.altair_chart(chart, use_container_width=True)
-    
+
     # Display daily production counts
     st.header("Daily Production")
     daily_production = data["daily_production"]
@@ -53,7 +53,7 @@ else:
     daily_production_df = daily_production_df.stack().reset_index()
     daily_production_df.columns = ["component", "date", "quantity"]
     daily_production_df["date"] = pd.to_datetime(daily_production_df["date"])
-    
+
     daily_chart = alt.Chart(daily_production_df).mark_bar().encode(
         x='date:T',
         y='quantity:Q',
@@ -61,7 +61,7 @@ else:
         tooltip=['component', 'date', 'quantity']
     ).interactive()
     st.altair_chart(daily_chart, use_container_width=True)
-    
+
     # Display component status
     st.header("Component Status")
     component_status = data["component_status"]

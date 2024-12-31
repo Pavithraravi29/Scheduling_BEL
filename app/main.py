@@ -25,4 +25,4 @@ app.include_router(leadtime.router, tags=["leadtime"])
 app.include_router(raw_material_router.router,tags=["rawmaterial/machinestatus"])
 
 # TO RUN
-# uvicorn app.main:app --host 172.18.7.88 --port 4321 --reload
+# uvicorn app.main:app --host 172.18.7.88 --port 1266 --reload
