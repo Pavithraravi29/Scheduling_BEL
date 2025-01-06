@@ -25,6 +25,8 @@ class ScheduledOperation(BaseModel):
     start_time: datetime
     end_time: datetime
     quantity: str
+    # operation_type: Optional[str] = "process"  # New field to distinguish between setup and process
+
 
 class ScheduleResponse(BaseModel):
     scheduled_operations: List[ScheduledOperation]
@@ -69,3 +71,7 @@ class ValidationResult(BaseModel):
     scheduled_quantity: int
     status: str
     message: str
+
+
+
+

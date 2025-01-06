@@ -9,7 +9,7 @@ st.title("Production Schedule")
 
 # Make a request to the scheduling endpoint
 try:
-    response = requests.get("http://172.18.7.85:5000/schedule/")
+    response = requests.get("http://172.18.7.85:5002/schedule/")
     response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
     data = response.json()
 except requests.exceptions.RequestException as e:
